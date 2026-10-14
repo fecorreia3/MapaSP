@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Mapa Rodízio São Paulo</title>
+<title>Mapa Rodizio Sao Paulo</title>
 
 <link rel="stylesheet"
 href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -157,9 +157,9 @@ shp("shapesMiniAnel.zip")
         geojson,
         {
             style:{
-                color:"#cc0000",
+                color:"#ccFF00",
                 weight:3,
-                fillColor:"#ff0000",
+                fillColor:"#ff00FF",
                 fillOpacity:0.25
             },
 
@@ -184,11 +184,10 @@ shp("shapesMiniAnel.zip")
 })
 .catch(function(erro){
 
-    console.error(erro);
+    console.error("ERRO COMPLETO:", erro);
+    console.error(JSON.stringify(erro));
 
-    alert(
-        "Erro ao carregar o shapefile."
-    );
+    alert("Erro ao carregar o shapefile.");
 
 });
 
@@ -305,10 +304,8 @@ function buscarEndereco(){
 
 </script>
 
-
-
-
-<iframe width="750" height="500" src="https://webforms.cetsp.com.br/mapabasico/map.aspx?map=mian" frameborder="0" allowfullscreen=""></iframe>
-
 </body>
 </html>
+
+
+Erro ao carregar o shapefile.
