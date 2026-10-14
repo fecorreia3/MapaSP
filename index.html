@@ -1,78 +1,81 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Mapa Rodizio Sao Paulo</title>
+    <title>Mapa Rodizio Sao Paulo</title>
 
-<link rel="stylesheet"
-href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-<style>
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 
-html, body{
-    margin:0;
-    padding:0;
-    height:100%;
-    font-family:Arial, Helvetica, sans-serif;
-}
+    <style>
 
-#topo{
-    position:absolute;
-    top:10px;
-    left:10px;
-    z-index:1000;
+        html, body{
+            margin:0;
+            padding:0;
+            height:100%;
+            font-family:Arial, Helvetica, sans-serif;
+        }
 
-    background:white;
-    padding:15px;
-    border-radius:10px;
+        #topo{
+            position:absolute;
+            top:10px;
+            left:10px;
+            z-index:1000;
 
-    box-shadow:0 2px 10px rgba(0,0,0,0.3);
+            background:white;
+            padding:15px;
+            border-radius:10px;
 
-    width:420px;
-}
+            box-shadow:0 2px 10px rgba(0,0,0,0.3);
 
-#busca{
-    width:300px;
-    padding:8px;
-}
+            width:420px;
+        }
 
-#btnBuscar{
-    padding:8px 15px;
-    cursor:pointer;
-}
+        #busca{
+            width:300px;
+            padding:8px;
+        }
 
-#resultado{
-    margin-top:10px;
-    font-size:14px;
-}
+        #btnBuscar{
+            padding:8px 15px;
+            cursor:pointer;
+        }
 
-#map{
-    width:100%;
-    height:100%;
-}
+        #resultado{
+            margin-top:10px;
+            font-size:14px;
+        }
 
-.legenda{
-    background:white;
-    padding:10px;
-    border-radius:8px;
-    box-shadow:0 0 10px rgba(0,0,0,.2);
-}
+        #map{
+            width:100%;
+            height:100%;
+        }
 
-</style>
+        .legenda{
+            background:white;
+            padding:10px;
+            border-radius:8px;
+            box-shadow:0 0 10px rgba(0,0,0,.2);
+        }
+
+    </style>
 </head>
 
 <body>
 
 <div id="topo">
 
-    <h3>Rodízio São Paulo</h3>
+    <h3>Buscar endereço</h3>
 
     <input
-        type="text"
-        id="busca"
-        placeholder="Digite um endereço">
+            type="text"
+            id="busca"
+            placeholder="Digite um endereço">
 
     <button id="btnBuscar">
         Localizar
@@ -81,6 +84,24 @@ html, body{
     <div id="resultado">
         Aguardando pesquisa...
     </div>
+
+    <hr>
+
+    <h4>Adicionar Endereços</h4>
+
+    <textarea
+            id="listaEnderecos"
+            rows="8"
+            style="width:100%;"
+            placeholder="Cole um endereço por linha"></textarea>
+
+    <br><br>
+
+    <button id="btnAdicionarPins">
+        Adicionar Pins Vermelhos
+    </button>
+
+
 
 </div>
 
@@ -92,220 +113,522 @@ html, body{
 
 <script>
 
-const mapa = L.map('map').setView(
-    [-23.55052, -46.63330],
-    11
-);
+    const mapa = L.map('map').setView(
+     [-23.55052, -46.63330],
+     11
+ );
 
-L.tileLayer(
-'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-{
-    attribution:
-    '&copy; OpenStreetMap Contributors'
-}).addTo(mapa);
+ L.tileLayer(
+ 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+ {
+     attribution:
+     '&copy; OpenStreetMap Contributors'
+ }).addTo(mapa);
 
-let marcador = null;
+ let marcador = null;
+ let camadaRodizio = null;
 
-let camadaRodizio = null;
+ let grupoPinsVermelhos = L.layerGroup().addTo(mapa);
+
+ // ==========================
+ // PONTOS FIXOS (BASES)
+ // ==========================
+
+ const pontosOrigem = [
+     {
+         nome: "Casa Weslley",
+         endereco:
+         "Rua Marjorie 89, Vila Jardim Mendes Gaia, Jardim São Paulo"
+     },
+     {
+         nome: "Casa André",
+         endereco:
+         "Rua Marjorie 152, Vila Jardim Mendes Gaia, Jardim São Paulo, Jabaquara, São Paulo, Região Sudeste, 04413-150, Brasil"
+     },
+     {
+    nome: "Casa Artur",
+    endereco:
+         "Liberdade, São Paulo, Região Sudeste, Brasil"
+},
+     {
+    nome: "Casa Tio Leo",
+    endereco:
+         "Cambuci, São Paulo, Região Sudeste, Brasil"
+},
+     {
+    nome: "Base",
+    endereco:
+         "Avenida Vereador José Diniz, 3825, Brooklin Velho, Campo Belo, São Paulo, Região Sudeste, 04614-001, Brasil"
+}
 
 
-// ==========================
-// LEGENDA
-// ==========================
+ ];
 
-const legenda = L.control({
-    position:'bottomright'
+ const iconeVerde = new L.Icon({
+     iconUrl:
+     'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+
+     shadowUrl:
+     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+
+     iconSize: [25, 41],
+     iconAnchor: [12, 41],
+     popupAnchor: [1, -34],
+     shadowSize: [41, 41]
+ });
+
+ const iconeVermelho = new L.Icon({
+    iconUrl:
+    'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+
+    shadowUrl:
+    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
 });
 
-legenda.onAdd = function(){
+ // ==========================
+ // LEGENDA
+ // ==========================
 
-    const div = L.DomUtil.create(
-        'div',
-        'legenda'
-    );
+ const legenda = L.control({
+     position:'bottomright'
+ });
 
-    div.innerHTML = `
-        <h4>Legenda</h4>
+ legenda.onAdd = function(){
 
-        <div>
-            <span style="
-                display:inline-block;
-                width:20px;
-                height:10px;
-                background:red;
-                opacity:.5;
-            "></span>
+     const div = L.DomUtil.create(
+         'div',
+         'legenda'
+     );
 
-            Área de Rodízio
-        </div>
-    `;
+     div.innerHTML = `
+         <h4>Legenda</h4>
 
-    return div;
-};
+         <div style="margin-bottom:5px;">
+             <span style="
+                 display:inline-block;
+                 width:20px;
+                 height:10px;
+                 background:red;
+                 opacity:.5;
+             "></span>
 
-legenda.addTo(mapa);
+             Área de Rodízio
+         </div>
 
+         <div>
+             🟢 Bases Operacionais
+         </div>
 
-// ==========================
-// CARREGA SHAPEFILE
-// ==========================
+     `;
 
-shp("shapesMiniAnel.zip")
-.then(function(geojson){
+     return div;
+ };
 
-    camadaRodizio = L.geoJSON(
-        geojson,
-        {
-            style:{
-                color:"#ccFF00",
-                weight:3,
-                fillColor:"#ff00FF",
-                fillOpacity:0.25
-            },
+ legenda.addTo(mapa);
 
-            onEachFeature:function(
-                feature,
-                layer
-            ){
+ // ==========================
+ // CARREGA PONTOS FIXOS
+ // ==========================
 
-                layer.bindPopup(
-                    "<b>Mini Anel Viário</b><br>Área de Rodízio"
-                );
+ async function carregarPontosOrigem(){
 
-            }
+     for(const ponto of pontosOrigem){
 
-        }
-    ).addTo(mapa);
+         try{
 
-    mapa.fitBounds(
-        camadaRodizio.getBounds()
-    );
+             const url =
+             "https://nominatim.openstreetmap.org/search?format=json&limit=1&q="
+             +
+             encodeURIComponent(
+                 ponto.endereco
+             );
 
-})
-.catch(function(erro){
+             const resposta =
+             await fetch(url);
 
-    console.error("ERRO COMPLETO:", erro);
-    console.error(JSON.stringify(erro));
+             const dados =
+             await resposta.json();
 
-    alert("Erro ao carregar o shapefile.");
+             if(dados.length === 0){
 
-});
+                 console.warn(
+                     "Não encontrado:",
+                     ponto.endereco
+                 );
 
+                 continue;
+             }
 
-// ==========================
-// BUSCA ENDEREÇO
-// ==========================
+             const lat =
+             parseFloat(
+                 dados[0].lat
+             );
 
-document
-.getElementById('btnBuscar')
+             const lon =
+             parseFloat(
+                 dados[0].lon
+             );
+
+             L.marker(
+                 [lat, lon],
+                 {
+                     icon: iconeVerde
+                 }
+             )
+             .addTo(mapa)
+             .bindPopup(
+                 `
+                 <b>${ponto.nome}</b>
+                 <br>
+                 ${ponto.endereco}
+                 `
+             );
+
+         }
+         catch(erro){
+
+             console.error(
+                 "Erro ao localizar:",
+                 ponto.endereco,
+                 erro
+             );
+
+         }
+
+     }
+
+ }
+
+ // carrega as bases logo no início
+ carregarPontosOrigem();
+
+ // ==========================
+ // CARREGA SHAPEFILE
+ // ==========================
+
+ shp("shapesMiniAnel.zip")
+ .then(function(geojson){
+
+     camadaRodizio = L.geoJSON(
+         geojson,
+         {
+             style:{
+                 color:"#ccFF00",
+                 weight:3,
+                 fillColor:"#ff00FF",
+                 fillOpacity:0.25
+             },
+
+             onEachFeature:function(
+                 feature,
+                 layer
+             ){
+
+                 layer.bindPopup(
+                     "<b>Mini Anel Viário</b><br>Área de Rodízio"
+                 );
+
+             }
+
+         }
+     ).addTo(mapa);
+
+     mapa.fitBounds(
+         camadaRodizio.getBounds()
+     );
+
+ })
+ .catch(function(erro){
+
+     console.error(
+         "ERRO COMPLETO:",
+         erro
+     );
+
+     alert(
+         "Erro ao carregar o shapefile."
+     );
+
+ });
+
+ // ==========================
+ // BUSCA ENDEREÇO
+ // ==========================
+
+ document
+ .getElementById('btnBuscar')
+ .addEventListener(
+     'click',
+     buscarEndereco
+ );
+
+ document
+ .getElementById('busca')
+ .addEventListener(
+     'keypress',
+     function(e){
+
+         if(e.key === 'Enter'){
+             buscarEndereco();
+         }
+
+     }
+ );
+
+ function buscarEndereco(){
+
+     const endereco =
+     document.getElementById(
+         'busca'
+     ).value;
+
+     if(!endereco){
+         return;
+     }
+
+     const url =
+     "https://nominatim.openstreetmap.org/search?format=json&limit=1&q="
+     +
+     encodeURIComponent(
+         endereco
+     );
+
+     fetch(url)
+     .then(r=>r.json())
+     .then(function(dados){
+
+         if(dados.length===0){
+
+             alert(
+                 "Endereço não encontrado."
+             );
+
+             return;
+         }
+
+         const lat =
+         parseFloat(
+             dados[0].lat
+         );
+
+         const lon =
+         parseFloat(
+             dados[0].lon
+         );
+
+         mapa.setView(
+             [lat, lon],
+             17
+         );
+
+         if(marcador){
+
+             mapa.removeLayer(
+                 marcador
+             );
+
+         }
+
+         marcador = L.marker(
+             [lat, lon]
+         ).addTo(mapa);
+
+         marcador.bindPopup(
+             dados[0].display_name
+         ).openPopup();
+
+         document.getElementById(
+             'resultado'
+         ).innerHTML = `
+             <b>Endereço:</b><br>
+             ${dados[0].display_name}
+             <br><br>
+
+             <b>Latitude:</b>
+             ${lat}
+
+             <br>
+
+             <b>Longitude:</b>
+             ${lon}
+         `;
+
+     })
+     .catch(function(){
+
+         alert(
+             "Erro ao consultar endereço."
+         );
+
+     });
+
+ }
+
+    document
+.getElementById('btnAdicionarPins')
 .addEventListener(
     'click',
-    buscarEndereco
-);
-
-document
-.getElementById('busca')
-.addEventListener(
-    'keypress',
-    function(e){
-
-        if(e.key === 'Enter'){
-            buscarEndereco();
-        }
-
-    }
+    adicionarPinsVermelhos
 );
 
 
-function buscarEndereco(){
+    async function adicionarPinsVermelhos(){
 
-    const endereco =
+    const texto =
     document.getElementById(
-        'busca'
+        'listaEnderecos'
     ).value;
 
-    if(!endereco){
+    if(!texto.trim()){
+
+        alert(
+            "Cole pelo menos um endereço."
+        );
+
         return;
     }
 
-    const url =
-    "https://nominatim.openstreetmap.org/search?format=json&limit=1&q="
-    +
-    encodeURIComponent(endereco);
+    grupoPinsVermelhos.clearLayers();
 
-    fetch(url)
-    .then(r=>r.json())
-    .then(function(dados){
+    const enderecos =
+    texto
+    .split('\n')
+    .map(e => e.trim())
+    .filter(e => e);
 
-        if(dados.length===0){
+    for(const endereco of enderecos){
 
-            alert(
-                "Endereço não encontrado."
+        try{
+
+            const url =
+            "https://nominatim.openstreetmap.org/search?format=json&limit=1&q="
+            +
+            encodeURIComponent(
+                endereco
             );
 
-            return;
-        }
+            const resposta =
+            await fetch(url);
 
-        const lat =
-        parseFloat(
-            dados[0].lat
-        );
+            const dados =
+            await resposta.json();
 
-        const lon =
-        parseFloat(
-            dados[0].lon
-        );
+            if(dados.length === 0){
 
-        mapa.setView(
-            [lat, lon],
-            17
-        );
+                console.warn(
+                    "Não encontrado:",
+                    endereco
+                );
 
-        if(marcador){
-            mapa.removeLayer(
-                marcador
+                continue;
+            }
+
+            const lat =
+            parseFloat(
+                dados[0].lat
             );
+
+            const lon =
+            parseFloat(
+                dados[0].lon
+            );
+
+            L.marker(
+                [lat, lon],
+                {
+                    icon: iconeVermelho
+                }
+            )
+            .bindPopup(
+                `<b>${endereco}</b>`
+            )
+            .addTo(
+                grupoPinsVermelhos
+            );
+
+        }
+        catch(erro){
+
+            console.error(
+                endereco,
+                erro
+            );
+
         }
 
-        marcador = L.marker(
-            [lat, lon]
-        ).addTo(mapa);
-
-        marcador.bindPopup(
-            dados[0].display_name
-        ).openPopup();
-
-        document.getElementById(
-            'resultado'
-        ).innerHTML = `
-            <b>Endereço:</b><br>
-            ${dados[0].display_name}
-            <br><br>
-
-            <b>Latitude:</b>
-            ${lat}
-
-            <br>
-
-            <b>Longitude:</b>
-            ${lon}
-        `;
-
-    })
-    .catch(function(){
-
-        alert(
-            "Erro ao consultar endereço."
-        );
-
-    });
+    }
 
 }
 
+    // ==========================
+// CLICAR NO MAPA
+// MOSTRA COORDENADAS E ENDEREÇO
+// ==========================
+
+let marcadorClique = null;
+
+mapa.on('click', async function(e){
+
+    const lat = e.latlng.lat;
+    const lon = e.latlng.lng;
+
+    try {
+
+        const url =
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
+
+        const resposta = await fetch(url);
+
+        const dados = await resposta.json();
+
+        const endereco =
+        dados.display_name || "Endereço não encontrado";
+
+        // remove marcador anterior
+        if(marcadorClique){
+            mapa.removeLayer(marcadorClique);
+        }
+
+        marcadorClique = L.marker([lat, lon])
+        .addTo(mapa);
+
+        marcadorClique.bindPopup(`
+            <b>Coordenadas</b><br>
+            Lat: ${lat.toFixed(6)}<br>
+            Lon: ${lon.toFixed(6)}
+            <hr>
+            <b>Endereço:</b><br>
+            ${endereco}
+        `).openPopup();
+
+        // Atualiza o painel lateral
+        document.getElementById('resultado').innerHTML = `
+            <b>Latitude:</b> ${lat.toFixed(6)}
+            <br>
+            <b>Longitude:</b> ${lon.toFixed(6)}
+            <br><br>
+            <b>Endereço:</b><br>
+            ${endereco}
+        `;
+
+    }
+    catch(erro){
+
+        console.error(erro);
+
+        alert(
+            "Erro ao obter endereço da coordenada."
+        );
+
+    }
+
+});
 </script>
 
 </body>
 </html>
-
-
-Erro ao carregar o shapefile.
